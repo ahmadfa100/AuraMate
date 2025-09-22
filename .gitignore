@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+.expo-shared/
+.vscode/
+.env
+.env.* 
+android/
+ios/
+dist/
+build/
+.fastlane/
+*.log
