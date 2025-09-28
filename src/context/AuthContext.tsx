@@ -4,21 +4,40 @@ import * as Linking from 'expo-linking';
 import * as SecureStore from 'expo-secure-store';
 import { supabase, SUPABASE_URL_CONST } from '../supabaseClient';
 
-type AuthContextType = {
-  user: any | null;
-  session: any | null;
+// PRODUCTION NOTES:
+// - Rotate Supabase keys regularly for security
+// - Do not store secrets in code - use environment variables
+// - Consider implementing token refresh logic for long-lived sessions
+// - Add proper error boundaries and user feedback
+
+// Types
+export interface User {
+  id: string;
+  email?: string;
+  [key: string]: any;
+}
+
+export interface Session {
+  access_token: string;
+  refresh_token?: string | null;
+  [key: string]: any;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  session: Session | null;
   isLoading: boolean;
   error: string | null;
   signInWithMagicLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   handleDeepLink: (url: string) => Promise<void>;
-};
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<any | null>(null);
-  const [session, setSession] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,32 +93,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // داخل src/context/AuthContext.tsx - استبدل handleDeepLink بالكامل بهذه الوظيفة
-const handleDeepLink = async (url: string) => {
+  const handleDeepLink = async (url: string) => {
     try {
       if (!url) return;
-  
+
       // Extract fragment after '#' (works even if Linking.parse doesn't return fragment)
       const hashIndex = url.indexOf('#');
       const fragment = hashIndex >= 0 ? url.substring(hashIndex + 1) : '';
-  
+
       // Some providers might put tokens in query params instead (after '?')
       const queryIndex = url.indexOf('?');
       const query = queryIndex >= 0 ? url.substring(queryIndex + 1, hashIndex >= 0 ? hashIndex : url.length) : '';
-  
+
       const params = new URLSearchParams(fragment || query);
       const access_token = params.get('access_token');
       const refresh_token = params.get('refresh_token');
-  
+
       if (!access_token) {
         // nothing to do
         return;
       }
-  
+
       const sessionObj = { access_token, refresh_token };
       await SecureStore.setItemAsync('supabase_session', JSON.stringify(sessionObj));
       setSession(sessionObj);
-  
+
       // fetch user info using Supabase auth endpoint with the token
       const res = await fetch(`${SUPABASE_URL_CONST}/auth/v1/user`, {
         headers: { Authorization: `Bearer ${access_token}` },

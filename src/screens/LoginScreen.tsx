@@ -1,6 +1,7 @@
 // src/screens/LoginScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import Constants from 'expo-constants';
 import { useAuth } from '../context/AuthContext';
 
 const LoginScreen: React.FC = () => {
@@ -12,6 +13,26 @@ const LoginScreen: React.FC = () => {
       Alert.alert('Invalid email', 'Please enter a valid email address');
       return;
     }
+
+    // Debug fetch to test network connectivity to Supabase
+    try {
+      const extras = (Constants.expoConfig && (Constants.expoConfig as any).extra) || 
+                    ((Constants as any).manifest && (Constants as any).manifest.extra) || {};
+      const SUPABASE_URL = extras.SUPABASE_URL || process.env.SUPABASE_URL;
+      
+      if (SUPABASE_URL) {
+        const response = await fetch(SUPABASE_URL);
+        Alert.alert(
+          'Debug: Supabase Connection', 
+          `Status: ${response.status} ${response.statusText}`
+        );
+      } else {
+        Alert.alert('Debug: Supabase Connection', 'SUPABASE_URL not found in config');
+      }
+    } catch (error: any) {
+      Alert.alert('Debug: Network Error', error.message || 'Failed to connect to Supabase');
+    }
+
     await signInWithMagicLink(email);
     Alert.alert('Magic link sent', 'Check your email and open the link on your device');
   };
